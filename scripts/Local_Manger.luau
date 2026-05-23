@@ -144,7 +144,7 @@ function manger:WriteToCacheFold(data : any, name : string, type_over_write : st
     if not config.session_write_folder_lock and not config.session_cache_folder then
         warn("[manger lib WARN]: no cache folder set for this session, creating one")
         local s,r = pcall(function()
-            local random_folder_name = "cache_" .. tostring(math.random(100000,999999))
+            local random_folder_name = "cache_".. name .. "_" .. tostring(math.random(100000,999999))
             manger:CreateCacheFold(random_folder_name)
         end)
         if not s then
@@ -272,8 +272,38 @@ function manger:Download(Url : string) -- very very VERY baisc download func
         return false, "ERR_DOWNLOAD:NO_URL"
     end
     local serverexist = nil
-    -- ping the server
-    
+    local pinged, r = pcall(function()
+        game:HttpPost(Url)
+    end)
+    if not pinged then
+        warn("[manger lib ERR]: could not find server! did you put the worng Url?")
+        return false, "ERR_DOWNLOAD:SERVER_NOT_FOUND"
+    end
+    if pinged then
+        print("[manger lib INFO]: server found, downloading data..")
+        local s,r = pcall(function()
+            return game:HttpGet(Url)
+        end)
+        if not s then
+            warn("[manger lib ERR]: failed to download data from server, error: " .. r)
+            return false, "ERR_DOWNLOAD:FAILED_DOWNLOAD"
+        else
+            print("[manger lib INFO]: saving..")
+            local s2,r2 = pcall(function()
+                local ran = math.random(100000,999999)
+                writefile(manger.config.session_write_folder_lock .. "/downloaded_data_" .. tostring(ran) .. ".bin", r) --.bin bc i dont know what kind of bullshit data the user want, thats why its a 'basic' downloader
+                return manger.config.session_cache_folder .. "downloaded_data_".. tostring(ran) .. ".bin"
+            end)
+            if not s2 then
+                warn("[manger lib ERR]: failed to save downloaded file!.. ".. r2 .." ")
+                r = nil
+                return false, "ERR_DOWNLOAD:FAIL_SAVE_FILE"
+            else
+                print("[manger lib INFO]: saved file")
+                return true, r2 -- 'path (i hope)' said display
+            end
+        end
+    end
 end
 
 return manger
